@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FM Scout - Advanced Player Intelligence Suite</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        fm: { bg: '#1e242a', card: '#2d363f', border: '#3d4954', excellent: '#4da0d6', good: '#a1d0f5' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-fm-bg text-gray-100 font-sans antialiased min-h-screen flex flex-col">
+
+    <header class="bg-fm-card/90 border-b border-fm-border sticky top-0 z-40 backdrop-blur-md">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex items-center gap-3">
+                <div class="bg-fm-excellent text-fm-bg p-2 rounded-lg font-black text-xl"><i class="fa-solid fa-calculator-combined"></i></div>
+                <div>
+                    <h1 class="text-lg font-extrabold text-white flex items-center gap-2">FM SCOUT <span class="text-xs bg-fm-excellent/20 text-fm-excellent px-2 py-0.5 rounded font-mono">v12.5 PRO</span></h1>
+                    <p class="text-[11px] text-gray-400">ระบบคัดกรองความสามารถและกราฟโพลีกอนอิงตรรกะ C++</p>
+                </div>
+            </div>
+            <div class="flex items-center gap-3">
+                <span id="player-count-badge" class="text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-database mr-1.5"></i>ฐานข้อมูล: 0 นักเตะ</span>
+                <span id="match-count-badge" class="text-xs font-semibold bg-fm-excellent/10 text-fm-excellent border border-fm-excellent/20 px-3 py-1.5 rounded-lg"><i class="fa-solid fa-filter mr-1.5"></i>ผ่านคัดกรอง: 0</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
+        
+        <div class="w-full lg:w-80 flex flex-col gap-5 shrink-0">
+            <div class="bg-fm-card border border-fm-border rounded-xl p-4 shadow-xl">
+                <h3 class="text-xs font-bold text-fm-excellent uppercase tracking-widest mb-3"><i class="fa-solid fa-file-import mr-1.5"></i> นำเข้า & ค้นหา</h3>
+                <div class="border border-dashed border-fm-border hover:border-fm-excellent/50 bg-fm-bg/50 rounded-lg p-3 text-center cursor-pointer transition-colors" id="upload-zone">
+                    <span class="text-xs font-medium text-fm-excellent block mb-1"><i class="fa-solid fa-cloud-arrow-up text-lg block mb-1"></i>อัปโหลดไฟล์รายงาน FM</span>
+                    <input type="file" id="file-upload" accept=".html" class="hidden">
+                </div>
+                <div class="mt-4">
+                    <label class="text-[11px] text-gray-400 font-medium block mb-1">ค้นหาชื่อหรือสัญชาติ</label>
+                    <input type="text" id="search-name" class="w-full bg-fm-bg text-white text-xs border border-fm-border rounded-lg px-3 py-2 focus:outline-none focus:border-fm-excellent" placeholder="พิมพ์ชื่อนักเตะเพื่อค้นหา...">
+                </div>
+                <div class="mt-3">
+                    <label class="text-[11px] text-gray-400 font-medium block mb-1">กรองตามตำแหน่งเด่น</label>
+                    <select id="filter-position-class" class="w-full bg-fm-bg text-white text-xs border border-fm-border rounded-lg px-2.5 py-2 focus:outline-none focus:border-fm-excellent">
+                        <option value="ALL">-- ทุกตำแหน่ง --</option>
+                        <option value="GK">ผู้รักษาประตู (GK)</option>
+                        <option value="DC">กองหลังตัวกลาง (DC)</option>
+                        <option value="DL/R">กองหลังริมเส้น/วิงแบ็ก (DL/R/WBs)</option>
+                        <option value="MC">กองกลาง (MC)</option>
+                        <option value="AMC">กองกลางตัวรุก (AMC)</option>
+                        <option value="AMR/L">ปีกตัวรุก (AMR/L)</option>
+                        <option value="ST">กองหน้า (ST)</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="bg-fm-card border border-fm-border rounded-xl p-4 shadow-xl flex flex-col gap-4">
+                <div class="flex justify-between items-center border-b border-fm-border pb-2">
+                    <h3 class="text-xs font-bold text-fm-excellent uppercase tracking-widest"><i class="fa-solid fa-sliders mr-1.5"></i> เกณฑ์ค่าพลังขั้นต่ำ</h3>
+                    <button id="btn-reset" class="text-[10px] text-red-400 hover:text-red-300 font-semibold"><i class="fa-solid fa-rotate-left mr-1"></i>รีเซ็ต</button>
+                </div>
+
+                <div class="overflow-y-auto max-h-[350px] pr-1 flex flex-col gap-4" id="sliders-container">
+                    <div class="bg-fm-bg/40 p-2.5 rounded-lg border border-fm-border/50 flex flex-col gap-2">
+                        <span class="text-[10px] text-fm-excellent font-bold uppercase mb-1 block">ประสิทธิภาพรายด้าน</span>
+                        <div class="slider-group" data-id="avg-defending"><div class="flex justify-between text-xs text-blue-400 font-medium"><span>เกมรับ</span><span class="val-lbl text-white">1</span></div><input type="range" min="1" max="20" value="1" class="w-full accent-fm-excellent h-1 bg-fm-bg rounded-lg"></div>
+                        <div class="slider-group" data-id="avg-physical"><div class="flex justify-between text-xs text-orange-400 font-medium"><span>ร่างกาย</span><span class="val-lbl text-white">1</span></div><input type="range" min="1" max="20" value="1" class="w-full accent-fm-excellent h-1 bg-fm-bg rounded-lg"></div>
+                        <div class="slider-group" data-id="avg-speed"><div class="flex justify-between text-xs text-emerald-400 font-medium"><span>ความเร็ว</span><span class="val-lbl text-white">1</span></div><input type="range" min="1" max="20" value="1" class="w-full accent-fm-excellent h-1 bg-fm-bg rounded-lg"></div>
+                        <div class="slider-group" data-id="avg-creativity"><div class="flex justify-between text-xs text-purple-400 font-medium"><span>สร้างสรรค์</span><span class="val-lbl text-white">1</span></div><input type="range" min="1" max="20" value="1" class="w-full accent-fm-excellent h-1 bg-fm-bg rounded-lg"></div>
+                        <div class="slider-group" data-id="avg-attacking"><div class="flex justify-between text-xs text-amber-400 font-medium"><span>เกมรุก</span><span class="val-lbl text-white">1</span></div><input type="range" min="1" max="20" value="1" class="w-full accent-fm-excellent h-1 bg-fm-bg rounded-lg"></div>
+                    </div>
+                    <div class="flex flex-col gap-2">
+                        <span class="text-[10px] text-fm-good font-bold uppercase mb-1 block">คัดกรองค่าพลังหลักเดี่ยว</span>
+                        <div class="flex justify-between items-center text-xs slider-group" data-id="fin"><span class="text-gray-300">Fin (จบสกอร์)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-fm-good h-1 bg-fm-bg"><span class="val-lbl font-bold text-white w-4 text-right">1</span></div></div>
+                        <div class="flex justify-between items-center text-xs slider-group" data-id="pas"><span class="text-gray-300">Pas (ส่งบอล)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-fm-good h-1 bg-fm-bg"><span class="val-lbl font-bold text-white w-4 text-right">1</span></div></div>
+                        <div class="flex justify-between items-center text-xs slider-group" data-id="tac"><span class="text-gray-300">Tac (สกัดบอล)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-fm-good h-1 bg-fm-bg"><span class="val-lbl font-bold text-white w-4 text-right">1</span></div></div>
+                        <div class="flex justify-between items-center text-xs slider-group" data-id="ant"><span class="text-gray-300">Ant (คาดการณ์)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-fm-good h-1 bg-fm-bg"><span class="val-lbl font-bold text-white w-4 text-right">1</span></div></div>
+                        <div class="flex justify-between items-center text-xs slider-group" data-id="pac"><span class="text-gray-300">Pac (ความเร็วปลาย)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-fm-good h-1 bg-fm-bg"><span class="val-lbl font-bold text-white w-4 text-right">1</span></div></div>
+                        <div class="flex justify-between items-center text-xs text-emerald-400 slider-group" data-id="det"><span class="font-medium">Det (มุ่งมั่น)</span><div class="flex items-center gap-2 w-32"><input type="range" min="1" max="20" value="1" class="w-full accent-emerald-500 h-1 bg-fm-bg"><span class="val-lbl font-bold w-4 text-right">1</span></div></div>
+                    </div>
+                </div>
+
+                <div class="border-t border-fm-border pt-3">
+                    <label class="text-[10px] text-gray-400 uppercase tracking-wider block mb-1.5 font-bold">การจัดเรียงลำดับ</label>
+                    <select id="sort-order" class="w-full bg-fm-bg text-white text-xs border border-fm-border rounded-lg px-2.5 py-2 focus:outline-none focus:border-fm-excellent">
+                        <option value="buy-score-desc" selected>🔥 ความคุ้มค่าการซื้อ: สูงสุด -> ต่ำสุด</option>
+                        <option value="total-desc">คะแนนรวมความสามารถ: สูงสุด -> ต่ำสุด</option>
+                        <option value="avrat-desc">เรตติ้งเฉลี่ย (Av Rat): สูงสุด -> ต่ำสุด</option>
+                        <option value="age-asc">ดาวรุ่งน่าปั้น: อายุน้อยสุด -> มากสุด</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="flex-grow flex flex-col gap-4">
+            <div class="bg-fm-card border border-fm-border rounded-xl p-3 flex flex-col sm:flex-row justify-between items-center gap-3 shadow-md">
+                <div class="flex gap-2 w-full sm:w-auto">
+                    <button id="view-cards-btn" class="flex-1 sm:flex-none text-xs font-bold px-4 py-2 rounded-lg bg-fm-excellent text-fm-bg flex items-center justify-center gap-1.5"><i class="fa-solid fa-address-card"></i> การ์ดรายงานวิเคราะห์</button>
+                    <button id="view-table-btn" class="flex-1 sm:flex-none text-xs font-bold px-4 py-2 rounded-lg bg-fm-bg text-gray-300 flex items-center justify-center gap-1.5"><i class="fa-solid fa-table-list"></i> วิเคราะห์แบบตาราง</button>
+                </div>
+                <div class="flex items-center gap-1.5 text-xs">
+                    <span class="text-gray-400"><i class="fa-solid fa-lightbulb text-amber-400"></i> ทางลัด:</span>
+                    <button id="shortcut-wonderkid" class="bg-fm-excellent/10 text-fm-excellent px-2 py-1 rounded border border-fm-excellent/20 font-semibold text-[11px]">Wonderkids</button>
+                    <button id="shortcut-zerocost" class="bg-emerald-500/10 text-emerald-400 px-2 py-1 rounded border border-emerald-500/20 font-semibold text-[11px]">High Determination</button>
+                </div>
+            </div>
+
+            <div id="cards-view-container" class="flex flex-col gap-4"></div>
+
+            <div id="table-view-container" class="hidden bg-fm-card border border-fm-border rounded-xl overflow-hidden shadow-xl">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-xs text-gray-300">
+                        <thead class="bg-[#1c2229] border-b border-fm-border text-white text-[11px] uppercase tracking-wider font-bold">
+                            <tr>
+                                <th class="p-3">ชื่อนักเตะ</th>
+                                <th class="p-3 text-center">อายุ</th>
+                                <th class="p-3">ตำแหน่ง</th>
+                                <th class="p-3 text-right">มูลค่า</th>
+                                <th class="p-3 text-center">Av Rat</th>
+                                <th class="p-3 text-center">ความถนัดเท้า</th>
+                                <th class="p-3 text-center text-emerald-400">มุ่งมั่น (Det)</th>
+                                <th class="p-3 text-center">คะแนนรวม</th>
+                                <th class="p-3 text-center text-fm-excellent">ความคุ้มค่า</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spreadsheet-tbody" class="divide-y divide-fm-border"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script src="tactical-analytics.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
