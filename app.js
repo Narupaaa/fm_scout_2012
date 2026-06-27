@@ -218,126 +218,120 @@
 
     function renderCards(list) {
         const container = document.getElementById('cards-view-container');
-        container.innerHTML = list.length === 0 ? `<div class="bg-fm-card border border-fm-border rounded-xl p-10 text-center text-gray-500"><i class="fa-solid fa-folder-open text-4xl block mb-3 text-gray-600"></i>ไม่มีข้อมูลนักเตะ กรุณานำเข้าไฟล์ HTML ด้านซ้าย</div>` : '';
+        container.innerHTML = list.length === 0 ? `<div class="bg-pitch-panel border border-pitch-border p-12 text-center font-mono text-xs text-gray-500">// NO SCOUTING DATA GENERATED. PLEASE UPLOAD INTERMEDIATE REPORT FILE.</div>` : '';
 
         list.forEach((p, idx) => {
             const card = document.createElement('div');
-            card.className = "bg-fm-card border border-fm-border rounded-xl shadow-lg flex flex-col md:flex-row overflow-hidden";
+            card.className = "bg-pitch-panel border border-pitch-border flex flex-col xl:flex-row overflow-hidden relative group";
 
             const renderAttr = (title, keys) => {
-                return `<div class="flex-1"><h4 class="text-[10px] font-black text-fm-excellent uppercase border-b border-fm-border/50 pb-0.5 mb-1">${title}</h4>` +
-                    keys.map(k => `<div class="flex justify-between text-[10px] py-0.5 hover:bg-fm-bg/50 px-1 rounded"><span class="text-gray-400">${k}</span><span class="${p[k] >= 17 ? 'text-fm-excellent font-bold' : p[k] >= 15 ? 'text-fm-good font-bold' : 'text-white'}">${p[k] ?? '-'}</span></div>`).join('') + `</div>`;
+                return `<div class="flex-1 font-mono"><h4 class="text-[9px] font-bold text-pitch-gold uppercase border-b border-pitch-border/60 pb-1 mb-2 tracking-widest">${title}</h4>` +
+                    keys.map(k => `<div class="flex justify-between text-[11px] py-1 border-b border-pitch-border/10 hover:bg-pitch-bg/40 px-1"><span class="text-gray-500">${k}</span><span class="${p[k] >= 17 ? 'text-pitch-gold font-bold bg-pitch-gold/10 px-1' : p[k] >= 15 ? 'text-white font-bold bg-white/5 px-1' : 'text-gray-400'}">${p[k] ?? '-'}</span></div>`).join('') + `</div>`;
             };
 
             const leftFootClass = getFootStyle(p.LeftFoot);
             const rightFootClass = getFootStyle(p.RightFoot);
 
-            // ดึงลอจิกวิเคราะห์จุดเด่น-จุดด้อยเหมือนเดิม
             const ana = p._analytics;
             const labels = { defending: 'เกมรับ', physical: 'ร่างกาย', speed: 'ความเร็ว', creativity: 'สร้างสรรค์', attacking: 'เกมรุก', technical: 'เทคนิค', aerial: 'ลูกกลางอากาศ', mental: 'สภาพจิตใจ' };
             let pros = Object.keys(labels).filter(k => ana[k] >= 15).map(k => labels[k]);
             let cons = Object.keys(labels).filter(k => ana[k] < 10).map(k => labels[k]);
 
             card.innerHTML = `
-          <div class="p-4 flex items-center justify-center bg-fm-bg/30 min-w-[200px] border-b md:border-b-0 md:border-r border-fm-border/50">
-        <canvas id="radar-${idx}" width="160" height="160"></canvas>
+    <!-- โซนกราฟเรดาร์ความคมชัดวิศวกรรมแทคติก -->
+    <div class="p-6 flex items-center justify-center bg-pitch-bg/20 min-w-[220px] border-b xl:border-b-0 xl:border-r border-pitch-border/50">
+        <canvas id="radar-${idx}" width="170" height="170" class="opacity-90 group-hover:opacity-100 transition-opacity"></canvas>
     </div>
 
-    <div class="p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r border-fm-border/50 md:w-80 shrink-0">
+    <!-- แผงประวัติสถิติและคะแนนวิเคราะห์เชิงลึก -->
+    <div class="p-6 flex flex-col justify-between border-b xl:border-b-0 xl:border-r border-pitch-border/50 xl:w-80 shrink-0">
         <div>
-            <div class="flex justify-between items-start">
+            <div class="flex justify-between items-start gap-2">
                 <div>
-                    <h3 class="text-base font-extrabold text-white flex items-center gap-1.5">
+                    <h3 class="text-base font-display font-bold text-white flex items-center gap-2">
                         ${p.Name} 
-                        <button class="btn-copy text-[9px] text-fm-excellent bg-fm-excellent/10 px-1.5 py-0.5 rounded border border-fm-excellent/20 hover:bg-fm-excellent/30" data-name="${p.Name}">
-                            <i class="fa-regular fa-clone"></i>
+                        <button class="btn-copy text-[9px] font-mono text-pitch-gold bg-pitch-gold/5 px-1.5 py-0.5 border border-pitch-gold/20 hover:bg-pitch-gold/20 transition-all" data-name="${p.Name}">
+                            COPY
                         </button>
                     </h3>
-                    <p class="text-[11px] text-gray-400">${p.Position}</p>
+                    <p class="text-[11px] font-mono text-gray-500 tracking-wider mt-0.5">${p.Position}</p>
                 </div>
-                <div class="text-right">
-                    <div class="text-xs font-black text-white">${p.Value}</div>
-                    <span class="text-[9px] bg-fm-excellent/20 text-fm-excellent px-1.5 py-0.5 rounded font-bold">Rat: ${p.AvRat}</span>
+                <div class="text-right font-mono">
+                    <div class="text-xs font-bold text-white">${p.Value}</div>
+                    <span class="text-[10px] text-pitch-gold bg-pitch-gold/10 px-1 font-bold">Age: ${p.Age}</span>
                 </div>
             </div>
             
-            <div class="flex flex-wrap gap-1 mt-2">
-                ${p.Age <= 21 && p._analytics.buyScore >= 70 ? '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">WONDERKID</span>' : ''}
-                ${p.Det >= 16 ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">HIGH DET</span>' : ''}
+            <div class="flex flex-wrap gap-1 mt-3">
+                ${p.Age <= 21 && p._analytics.buyScore >= 70 ? '<span class="border border-pitch-gold/40 text-pitch-gold font-mono text-[9px] px-2 py-0.5 bg-pitch-gold/5 font-bold tracking-wider">ELITE WONDERKID</span>' : ''}
+                ${p.Det >= 16 ? '<span class="border border-pitch-mint/40 text-pitch-mint font-mono text-[9px] px-2 py-0.5 bg-pitch-mint/5 font-bold tracking-wider">IRON WILL</span>' : ''}
             </div>
 
-            <div class="mt-3 grid grid-cols-4 gap-1 text-center bg-fm-bg/50 p-1.5 rounded-lg border border-fm-border/30">
-                <div class="text-[10px]">
-                    <span class="text-amber-400 block text-[9px] uppercase font-semibold">Age</span>
-                    <span class="text-white font-bold">${p.Age}</span>
+            <div class="mt-4 grid grid-cols-4 gap-0.5 text-center bg-pitch-bg border border-pitch-border/60 font-mono p-2">
+                <div>
+                    <span class="text-gray-600 block text-[9px] uppercase">RATING</span>
+                    <span class="text-white font-bold text-xs">${p.AvRat}</span>
                 </div>
-                <div class="text-[10px] border-l border-fm-border/40">
-                    <span class="text-gray-400 block text-[9px] uppercase font-semibold">Apps</span>
-                    <span class="text-white font-bold">${p.Apps}</span>
+                <div class="border-l border-pitch-border/40">
+                    <span class="text-gray-600 block text-[9px] uppercase">Apps</span>
+                    <span class="text-white font-bold text-xs">${p.Apps}</span>
                 </div>
-                <div class="text-[10px] border-l border-fm-border/40">
-                    <span class="text-emerald-400 block text-[9px] uppercase font-semibold">Gls</span>
-                    <span class="text-white font-bold">${p.Gls}</span>
+                <div class="border-l border-pitch-border/40">
+                    <span class="text-pitch-gold block text-[9px] uppercase">Gls</span>
+                    <span class="text-white font-bold text-xs">${p.Gls}</span>
                 </div>
-                <div class="text-[10px] border-l border-fm-border/40">
-                    <span class="text-fm-excellent block text-[9px] uppercase font-semibold">Ast</span>
-                    <span class="text-white font-bold">${p.Ast}</span>
+                <div class="border-l border-pitch-border/40">
+                    <span class="text-pitch-mint block text-[9px] uppercase">Ast</span>
+                    <span class="text-white font-bold text-xs">${p.Ast}</span>
                 </div>
             </div>
             
-            <div class="border-t border-fm-border/40 mt-3 pt-2 text-xs flex flex-col gap-1 text-gray-300">
-                <div class="flex justify-between items-center py-0.5">
-                    <span>เท้าที่ถนัด (L / R):</span>
-                    <div class="flex items-center gap-3 text-base">
-                        <span class="${leftFootClass} transition-all" title="เท้าซ้าย: ${p.LeftFoot}">
-                            <i class="fa-solid fa-shoe-prints -scale-x-100 inline-block"></i>
-                        </span>
-                        <span class="text-gray-600 text-[10px] font-mono">|</span>
-                        <span class="${rightFootClass} transition-all" title="เท้าขวา: ${p.RightFoot}">
-                            <i class="fa-solid fa-shoe-prints"></i>
-                        </span>
-                    </div>
+            <div class="border-t border-pitch-border/40 mt-4 pt-3 font-mono text-[11px] flex flex-col gap-1.5 text-gray-400">
+                <div class="flex justify-between items-center">
+                    <span>Dominant Feet (L/R):</span>
+                    <span class="text-white text-xs">${p.LeftFoot.substring(0, 4)} / ${p.RightFoot.substring(0, 4)}</span>
                 </div>
-                <div class="flex justify-between"><span>สโมสร / ชาติ (Youth):</span><span class="text-white font-semibold">${p.Club} / ${p.Nationality} <span class="text-gray-400">(${p.YthApps})</span></span></div>
-                <div class="flex justify-between"><span>ลงเล่นทีมชาติชุดใหญ่:</span><span class="text-orange-400 font-bold">${p.IntApps} นัด</span></div>
-                <div class="flex justify-between"><span>ตำแหน่งเด่น:</span><span class="text-fm-excellent font-bold">${p._analytics.bestPos} (${p._analytics.bestScore}%)</span></div>
-                <div class="flex justify-between"><span>ความน่าซื้อ:</span><span class="text-emerald-400 font-bold text-sm">${p._analytics.buyScore}/100</span></div>
+                <div class="flex justify-between"><span>Club / Nation:</span><span class="text-white truncate max-w-[160px]">${p.Club} / ${p.Nationality}</span></div>
+                <div class="flex justify-between"><span>Int Caps / Youth:</span><span class="text-white">${p.IntApps} <span class="text-gray-600">(${p.YthApps})</span></span></div>
+                <div class="flex justify-between"><span>Calculated Role:</span><span class="text-pitch-gold font-bold">${p._analytics.bestPos}</span></div>
+                <div class="flex justify-between items-center pt-1 border-t border-pitch-border/20"><span>Purchase Score:</span><span class="text-pitch-gold font-display font-bold text-sm">${p._analytics.buyScore} / 100</span></div>
             </div>
         </div>
 
-        <div class="mt-2 pt-2 border-t border-fm-border/30">
-            <button class="toggle-desc-btn text-[10px] w-full bg-fm-bg hover:bg-fm-border text-gray-300 hover:text-white py-1 rounded font-bold transition-colors">
-                <i class="fa-solid fa-bars-staggered mr-1"></i> สลับเป็นบทสรุปข้อความ
+        <div class="mt-4 pt-3 border-t border-pitch-border/30">
+            <button class="toggle-desc-btn text-[10px] font-mono w-full bg-pitch-bg hover:bg-pitch-border text-gray-400 hover:text-white py-2 transition-all uppercase tracking-widest">
+                // TOGGLE TEXTUAL SUMMARY
             </button>
         </div>
     </div>
 
-    <div class="attr-raw-block flex-grow p-4 flex gap-4 bg-[#151c25]/30">
-        ${renderAttr('Technical', ['Cro', 'Dri', 'Fin', 'Fir', 'Hea', 'Pas', 'Tac', 'Tec'])}
-        ${renderAttr('Mental', ['Ant', 'Bra', 'Cmp', 'Cnt', 'Dec', 'Det', 'Off', 'Pos', 'Wor'])}
-        ${renderAttr('Physical', ['Acc', 'Agi', 'Bal', 'Jum', 'Nat', 'Pac', 'Sta', 'Str'])}
+    <!-- บล็อกแสดงข้อมูลค่าพลังดิบสไตล์โมโนสเปซคมกริบ -->
+    <div class="attr-raw-block flex-grow p-6 flex flex-col sm:flex-row gap-6 bg-pitch-bg/20">
+        ${renderAttr('Technical Core', ['Cro', 'Dri', 'Fin', 'Fir', 'Hea', 'Pas', 'Tac', 'Tec'])}
+        ${renderAttr('Mental Frame', ['Ant', 'Bra', 'Cmp', 'Cnt', 'Dec', 'Det', 'Off', 'Pos', 'Wor'])}
+        ${renderAttr('Physical Index', ['Acc', 'Agi', 'Bal', 'Jum', 'Nat', 'Pac', 'Sta', 'Str'])}
     </div>
 
-            <div class="attr-summary-block hidden flex-grow p-5 bg-[#151c25]/40 flex flex-col gap-3">
-                <h4 class="text-xs font-bold text-fm-excellent uppercase tracking-wider border-b border-fm-border pb-1">
-                    <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> บทวิเคราะห์สไตล์การเล่นแบบสรุป
-                </h4>
-                <div class="text-xs text-gray-300 leading-relaxed space-y-2">
-                    <p class="font-semibold text-white">
-                        <i class="fa-solid fa-circle-user text-gray-400 mr-1.5"></i> 
-                        ${p.Name} ปัจจุบันอายุ ${p.Age} ปี ถนัดตำแหน่งหลักคือ <span class="text-fm-excellent">${p.Position}</span>
-                    </p>
-                    <div class="p-2 rounded bg-emerald-500/5 border border-emerald-500/10">
-                        <span class="text-emerald-400 font-bold block mb-0.5"><i class="fa-solid fa-circle-check mr-1"></i> ด้านที่เชี่ยวชาญ (จุดเด่น):</span>
-                        <span class="text-gray-300">${pros.length ? pros.join(', ') : 'ไม่มีทักษะด้านใดที่โดดเด่นเป็นพิเศษในระดับสูง'}</span>
-                    </div>
-                    <div class="p-2 rounded bg-red-500/5 border border-red-500/10">
-                        <span class="text-red-400 font-bold block mb-0.5"><i class="fa-solid fa-circle-xmark mr-1"></i> ด้านที่เป็นอุปสรรค (จุดด้อย):</span>
-                        <span class="text-gray-300">${cons.length ? cons.join(', ') : 'ภาพรวมค่อนข้างสมดุลดี ไม่มีจุดบกพร่องร้ายแรง'}</span>
-                    </div>
-                </div>
+    <!-- บล็อกสรุปข้อความกรณีเปิดดูบทวิเคราะห์ -->
+    <div class="attr-summary-block hidden flex-grow p-6 bg-pitch-bg/40 flex flex-col gap-4 font-mono">
+        <h4 class="text-xs font-bold text-pitch-gold uppercase tracking-wider border-b border-pitch-border pb-2">
+            // TACTICAL INTELLIGENCE DOSSIER
+        </h4>
+        <div class="text-xs text-gray-400 leading-relaxed space-y-3">
+            <p class="text-white">
+                > Target profile <span class="text-pitch-gold">${p.Name}</span> operates optimally within <span class="text-pitch-gold">${p.Position}</span> architectures.
+            </p>
+            <div class="p-3 bg-pitch-bg border-l-2 border-pitch-gold">
+                <span class="text-pitch-gold font-bold block mb-1">PROS / KEY ADVANTAGES:</span>
+                <span class="text-gray-300 text-[11px]">${pros.length ? pros.join(', ') : 'ไม่มีทักษะที่อยู่ในระดับสูงเป็นพิเศษ'}</span>
             </div>
-        `;
+            <div class="p-3 bg-pitch-bg border-l-2 border-gray-600">
+                <span class="text-gray-500 font-bold block mb-1">CONS / LIMITATIONS:</span>
+                <span class="text-gray-300 text-[11px]">${cons.length ? cons.join(', ') : 'โครงสร้างพลังมีความสมดุล ไม่มีจุดบกพร่องร้ายแรง'}</span>
+            </div>
+        </div>
+    </div>
+`;
 
             card.querySelector('.btn-copy').addEventListener('click', function () {
                 executeTextCopy(this.getAttribute('data-name'), this);
@@ -350,11 +344,11 @@
                 if (isShowingRaw) {
                     rawBlock.classList.add('hidden');
                     summaryBlock.classList.remove('hidden');
-                    this.innerHTML = '<i class="fa-solid fa-table-cells mr-1"></i> สลับเป็นดูค่าพลังดิบ';
+                    this.innerHTML = '// SHOW RAW METRIC GRID';
                 } else {
                     rawBlock.classList.remove('hidden');
                     summaryBlock.classList.add('hidden');
-                    this.innerHTML = '<i class="fa-solid fa-bars-staggered mr-1"></i> สลับเป็นบทสรุปข้อความ';
+                    this.innerHTML = '// TOGGLE TEXTUAL SUMMARY';
                 }
             });
 
@@ -371,41 +365,43 @@
         // เคลียร์ Canvas เก่าก่อนวาดใหม่
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        const cx = canvas.width / 2, cy = canvas.height / 2, r = 50;
+        const cx = canvas.width / 2, cy = canvas.height / 2, r = 55;
 
         const metrics = [
-            { name: 'Def', val: analyticsData.defending },
-            { name: 'Phy', val: analyticsData.physical },
-            { name: 'Spd', val: analyticsData.speed },
-            { name: 'Cre', val: analyticsData.creativity },
-            { name: 'Att', val: analyticsData.attacking },
-            { name: 'Tec', val: analyticsData.technical },
-            { name: 'Aer', val: analyticsData.aerial },
-            { name: 'Men', val: analyticsData.mental }
+            { name: 'DEF', val: analyticsData.defending },
+            { name: 'PHY', val: analyticsData.physical },
+            { name: 'SPD', val: analyticsData.speed },
+            { name: 'CRE', val: analyticsData.creativity },
+            { name: 'ATT', val: analyticsData.attacking },
+            { name: 'TEC', val: analyticsData.technical },
+            { name: 'AER', val: analyticsData.aerial },
+            { name: 'MEN', val: analyticsData.mental }
         ];
 
         const numAxes = metrics.length;
 
-        // 1. วาดพื้นหลัง 8 เหลี่ยมลดหลั่นตามโซนพลัง (FM Skin Styles)
-        [['#65824c', 1], ['#b8a362', 15 / 20], ['#b07f56', 10 / 20], ['#a85b54', 5 / 20]].forEach(([color, ratio]) => {
+        // 1. วาดเส้นโครงสร้างใยแมงมุมตารางพิกัดหลังบ้าน (Background Grid)
+        ctx.strokeStyle = 'rgba(32, 46, 59, 0.5)';
+        ctx.lineWidth = 0.5;
+        [20, 15, 10, 5].forEach(level => {
             ctx.beginPath();
             metrics.forEach((_, i) => {
                 const angle = (i * Math.PI / 4) - Math.PI / 2;
-                ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + (r * ratio) * Math.cos(angle), cy + (r * ratio) * Math.sin(angle));
+                const currR = (level / 20) * r;
+                ctx[i === 0 ? 'moveTo' : 'lineTo'](cx + currR * Math.cos(angle), cy + currR * Math.sin(angle));
             });
             ctx.closePath();
-            ctx.fillStyle = color;
-            ctx.fill();
+            ctx.stroke();
         });
 
         // 2. คำนวณพิกัดจุดพลังของนักเตะเก็บไว้ใน Array
         const points = [];
-        let maxVal = 1;
+        let hasEliteAttribute = false;
         metrics.forEach((m, i) => {
             const angle = (i * Math.PI / 4) - Math.PI / 2;
             const normalizedVal = Math.max(1, Math.min(20, m.val));
             const dist = (normalizedVal / 20) * r;
-            if (normalizedVal > maxVal) maxVal = normalizedVal;
+            if (normalizedVal >= 16) hasEliteAttribute = true;
             points.push({
                 x: cx + dist * Math.cos(angle),
                 y: cy + dist * Math.sin(angle),
@@ -414,37 +410,35 @@
             });
         });
 
-        // 3. ปรับปรุง: ระบบแรเงากราฟด้วยการไล่เฉดสีรัศมี (Radial Gradient Colors)
-        // สร้าง Gradient จากจุดศูนย์กลางวิ่งออกไปยังขอบรัศมีสูงสุดของพลังนักเตะ
-        const gradient = ctx.createRadialGradient(cx, cy, 2, cx, cy, (maxVal / 20) * r);
-
-        // กำหนดสีแรเงาตามความเทพของนักเตะ (Excellent -> ฟ้าเรืองแสง, ทั่วไป -> ขาวนวลโปร่งแสง)
-        if (maxVal >= 17) {
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.4)');
-            gradient.addColorStop(0.6, 'rgba(77, 160, 214, 0.35)'); // สีแรเงาฟ้า Excellent
-            gradient.addColorStop(1, 'rgba(77, 160, 214, 0.15)');
-        } else if (maxVal >= 15) {
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.35)');
-            gradient.addColorStop(0.7, 'rgba(161, 208, 245, 0.25)'); // สีแรเงาฟ้าอ่อน Good
-            gradient.addColorStop(1, 'rgba(161, 208, 245, 0.05)');
-        } else {
-            gradient.addColorStop(0, 'rgba(255, 255, 255, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 255, 255, 0.05)'); // สีขาวโปร่งแสงปกติ
-        }
-
-        // ถมพื้นที่แรเงาด้วยลวดลาย Gradient ที่คำนวณไว้
+        // 3. ถมพื้นที่แรเงาความสามารถให้สว่างดึงสายตา (High-Contrast Fills)
         ctx.beginPath();
         points.forEach((pt, i) => {
             ctx[i === 0 ? 'moveTo' : 'lineTo'](pt.x, pt.y);
         });
         ctx.closePath();
 
-        ctx.fillStyle = 'rgba(237, 241, 245, 0.31)';
-
+        // ถ้านักเตะมีพลังระดับ Elite ให้กราฟสว่างวาบเป็นพิเศษ
+        ctx.fillStyle = hasEliteAttribute ? 'rgba(229, 193, 88, 0.24)' : 'rgba(229, 193, 88, 0.14)';
         ctx.fill();
 
-        // 4. วาดเส้นขอบแบบแยกเซกเมนต์เปลี่ยนสีตามค่าพลัง
-        ctx.lineWidth = 2.2;
+        // 4. วาดเส้นขอบเอฟเฟกต์นีออนเรืองแสง (Double-Pass Neon Glow Stroke)[cite: 1]
+        // Pass 4.1: วาดเอฟเฟกต์ฟุ้งกระจายด้านหลัง (Blur Glow Layer)
+        for (let i = 0; i < numAxes; i++) {
+            const pt1 = points[i];
+            const pt2 = points[(i + 1) % numAxes];
+
+            ctx.beginPath();
+            ctx.moveTo(pt1.x, pt1.y);
+            ctx.lineTo(pt2.x, pt2.y);
+
+            if (pt1.val >= 15) {
+                ctx.strokeStyle = pt1.val >= 17 ? 'rgba(229, 193, 88, 0.4)' : 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 4.5; // เส้นหนาเพื่อสร้างมิติฟุ้ง
+                ctx.stroke();
+            }
+        }
+
+        // Pass 4.2: วาดเส้นแกนหลักที่คมกริบทับด้านบน (Core Sharp Vector)
         for (let i = 0; i < numAxes; i++) {
             const pt1 = points[i];
             const pt2 = points[(i + 1) % numAxes];
@@ -454,46 +448,58 @@
             ctx.lineTo(pt2.x, pt2.y);
 
             if (pt1.val >= 17) {
-                ctx.strokeStyle = '#4da0d6';
+                ctx.strokeStyle = '#E5C158'; // Gold[cite: 1]
+                ctx.lineWidth = 2.0;
             } else if (pt1.val >= 15) {
-                ctx.strokeStyle = '#a1d0f5';
+                ctx.strokeStyle = '#ffffff'; // White[cite: 1]
+                ctx.lineWidth = 1.5;
             } else {
-                ctx.strokeStyle = '#ffffff';
+                ctx.strokeStyle = '#4b5563'; // Gray-600[cite: 1]
+                ctx.lineWidth = 1.0;
             }
             ctx.stroke();
         }
 
-        // 5. วาดจุดแกน (Vertices Dots) และข้อความกำกับค่าพลัง
+        // 5. วาดหมุดจุดตัด (Vertex Nodes) และข้อความกำกับ
         points.forEach((pt, i) => {
             const m = metrics[i];
 
+            // วาดจุดแกนพลังให้ชัดขึ้น[cite: 1]
             ctx.beginPath();
-            ctx.arc(pt.x, pt.y, 2.5, 0, 2 * Math.PI);
-            ctx.fillStyle = pt.val >= 17 ? '#4da0d6' : pt.val >= 15 ? '#a1d0f5' : '#ffffff';
+            ctx.arc(pt.x, pt.y, pt.val >= 15 ? 3.5 : 2.5, 0, 2 * Math.PI);
+            ctx.fillStyle = pt.val >= 15 ? '#E5C158' : '#374151';
             ctx.fill();
 
-            // เส้นใยแมงมุมวิ่งเข้าหาจุดศูนย์กลาง
+            // เพิ่มวงแหวนไฮไลท์สีขาวครอบหมุดระดับโปร
+            if (pt.val >= 16) {
+                ctx.beginPath();
+                ctx.arc(pt.x, pt.y, 4.5, 0, 2 * Math.PI);
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.lineWidth = 0.8;
+                ctx.stroke();
+            }
+
+            // เส้นแกนกลางวิ่งเข้าหาจุดศูนย์กลาง
             ctx.beginPath();
             ctx.moveTo(cx, cy);
             ctx.lineTo(cx + r * Math.cos(pt.angle), cy + r * Math.sin(pt.angle));
-            ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
             ctx.lineWidth = 0.5;
             ctx.stroke();
 
-            // แสดงข้อความกำกับปรับสีตามความเก่ง
-            ctx.font = 'bold 8px Inter, sans-serif';
-            ctx.fillStyle = pt.val >= 17 ? '#4da0d6' : pt.val >= 15 ? '#a1d0f5' : '#cbd5e1';
+            // แสดงตัวอักษรหัวข้อสถิติแบบคมชัด
+            ctx.font = '700 8.5px "JetBrains Mono", monospace';
+            ctx.fillStyle = pt.val >= 17 ? '#E5C158' : pt.val >= 15 ? '#ffffff' : '#6b7280';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
 
-            const labelDist = r + 12;
+            const labelDist = r + 13;
             const lx = cx + labelDist * Math.cos(pt.angle);
             const ly = cy + labelDist * Math.sin(pt.angle);
 
-            ctx.fillText(`${m.name}(${m.val})`, lx, ly);
+            ctx.fillText(`${m.name}`, lx, ly);
         });
     }
-
     function renderTable(list) {
         const tbody = document.getElementById('spreadsheet-tbody');
         tbody.innerHTML = list.length === 0 ? `<tr><td colspan="9" class="p-8 text-center text-gray-500">ไม่มีข้อมูลที่ตรงตามเงื่อนไข</td></tr>` : '';
@@ -540,10 +546,10 @@
     }
 
     /**
- * ฟังก์ชันช่วยแปลงระดับความถนัดของเท้าให้เป็นสีตามระบบ FM
- * @param {string} footRating - ระดับความถนัด เช่น "Very Strong", "Strong", "Weak"
- * @returns {string} Tailwind Class สำหรับกำหนดสี
- */
+    * ฟังก์ชันช่วยแปลงระดับความถนัดของเท้าให้เป็นสีตามระบบ FM
+    * @param {string} footRating - ระดับความถนัด เช่น "Very Strong", "Strong", "Weak"
+    * @returns {string} Tailwind Class สำหรับกำหนดสี
+    */
     function getFootStyle(footRating) {
         switch (footRating) {
             case 'Very Strong':
