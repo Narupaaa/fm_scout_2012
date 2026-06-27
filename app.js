@@ -99,13 +99,19 @@
             const rows = Array.from(table.querySelectorAll('tr'));
             const headers = Array.from(rows[0].querySelectorAll('td')).map(td => td.textContent.trim());
 
+            // ดึงพิกัดดัชนีคอลัมน์จาก Header
             const idxMap = {
                 name: headers.indexOf('Name'), age: headers.indexOf('Age'),
                 val: headers.indexOf('Value'), pos: headers.indexOf('Position'),
-                avRat: headers.findIndex(h => h.includes('Av Rat') || h.includes('AvRaw'))
+                avRat: headers.findIndex(h => h.includes('Av Rat') || h.includes('AvRaw')),
+                gls: headers.indexOf('Gls'),
+                ast: headers.indexOf('Ast'),
+                apps: headers.indexOf('Apps'),
+                intApps: headers.indexOf('Int'),
+                ythApps: headers.findIndex(h => h.includes('Yth Apps') || h.includes('Yth')) // 💡 ดักจับคอลัมน์เยาวชน
             };
 
-            if (idxMap.name === -1) return showToastNotification('ไฟล์ไม่ตรงตามแพตเทิร์นสกินหลัก (ไม่พบคอลัมน์ Name)', 'error');
+            if (idxMap.name === -1) return showToastNotification('ไฟล์ไม่ตรงตามแพตเทิร์นสกินหลัก', 'error');
 
             globalPlayersDatabase = rows.slice(1).map(row => {
                 const tds = Array.from(row.querySelectorAll('td')).map(td => td.textContent.trim());
@@ -121,17 +127,38 @@
                     LeftFoot: headers.includes('Left Foot') ? tds[headers.indexOf('Left Foot')] : 'Reasonable',
                     RightFoot: headers.includes('Right Foot') ? tds[headers.indexOf('Right Foot')] : 'Very Strong',
                     Club: headers.includes('Club') ? tds[headers.indexOf('Club')] : 'Unknown',
-                    Nationality: 'Unknown', Nat: 10
+
+                    // 💡 กำหนดค่าเริ่มต้นแยกกันอย่างชัดเจนป้องกันการชนกันของตัวแปร
+                    Nationality: 'Unknown',
+                    NaturalFitness: 10,
+
+                    Gls: idxMap.gls !== -1 ? parseInt(tds[idxMap.gls]) || 0 : 0,
+                    Ast: idxMap.ast !== -1 ? parseInt(tds[idxMap.ast]) || 0 : 0,
+                    Apps: idxMap.apps !== -1 ? tds[idxMap.apps] : '0',
+                    YthApps: idxMap.ythApps !== -1 ? parseInt(tds[idxMap.ythApps]) || 0 : 0,
+                    IntApps: idxMap.intApps !== -1 ? parseInt(tds[idxMap.intApps]) || 0 : 0
                 };
 
+                // วนลูปเก็บค่าพลัง Attributes ย่อย
                 headers.forEach((h, index) => {
                     if (['Name', 'Age', 'Value', 'Position', 'Sec. Position', 'Av Rat', 'Left Foot', 'Right Foot', 'Club'].includes(h) || !h) return;
+
+                    // 💡 ตรรกะคัดกรองคำซ้ำขั้นสูง: เช็คคอลัมน์ 'Nat'
                     if (h === 'Nat') {
-                        isNaN(tds[index]) ? p.Nationality = tds[index] : p.Nat = parseInt(tds[index]) || 10;
+                        if (isNaN(tds[index]) || tds[index] === '-') {
+                            p.Nationality = tds[index] || 'Unknown'; // ถ้าเป็นข้อความ (เช่น GER, BIH) -> สัญชาติ
+                        } else {
+                            p.NaturalFitness = parseInt(tds[index]) || 10; // ถ้าเป็นตัวเลข -> Natural Fitness
+                        }
                     } else {
+                        // แมปชื่อเรียกค่าพลังทางขวาสุดตามปกติ
                         p[h] = parseInt(tds[index]) || 1;
                     }
                 });
+
+                // ผูกค่ากลับไปหา Physical Attribute ให้ฟังก์ชันแสดงผลทางขวาเรียกใช้ได้ไม่พัง
+                p.Nat = p.NaturalFitness;
+
                 return p;
             }).filter(Boolean);
 
@@ -195,7 +222,6 @@
 
         list.forEach((p, idx) => {
             const card = document.createElement('div');
-            // ใช้ flex-col และ md:flex-row เพื่อให้แสดงผลเรียงจากซ้ายไปขวาบนจอคอมพิวเตอร์
             card.className = "bg-fm-card border border-fm-border rounded-xl shadow-lg flex flex-col md:flex-row overflow-hidden";
 
             const renderAttr = (title, keys) => {
@@ -206,63 +232,130 @@
             const leftFootClass = getFootStyle(p.LeftFoot);
             const rightFootClass = getFootStyle(p.RightFoot);
 
-            // 💡 จัด LAYOUT ใหม่ภายใน innerHTML: กราฟ (ซ้าย) -> ข้อมูล (กลาง) -> พลัง (ขวา)
-            card.innerHTML = `
-            <div class="p-4 flex items-center justify-center bg-fm-bg/30 min-w-[200px] border-b md:border-b-0 md:border-r border-fm-border/50">
-                <canvas id="radar-${idx}" width="160" height="160"></canvas>
-            </div>
+            // ดึงลอจิกวิเคราะห์จุดเด่น-จุดด้อยเหมือนเดิม
+            const ana = p._analytics;
+            const labels = { defending: 'เกมรับ', physical: 'ร่างกาย', speed: 'ความเร็ว', creativity: 'สร้างสรรค์', attacking: 'เกมรุก', technical: 'เทคนิค', aerial: 'ลูกกลางอากาศ', mental: 'สภาพจิตใจ' };
+            let pros = Object.keys(labels).filter(k => ana[k] >= 15).map(k => labels[k]);
+            let cons = Object.keys(labels).filter(k => ana[k] < 10).map(k => labels[k]);
 
-            <div class="p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r border-fm-border/50 md:w-80 shrink-0">
+            card.innerHTML = `
+          <div class="p-4 flex items-center justify-center bg-fm-bg/30 min-w-[200px] border-b md:border-b-0 md:border-r border-fm-border/50">
+        <canvas id="radar-${idx}" width="160" height="160"></canvas>
+    </div>
+
+    <div class="p-4 flex flex-col justify-between border-b md:border-b-0 md:border-r border-fm-border/50 md:w-80 shrink-0">
+        <div>
+            <div class="flex justify-between items-start">
                 <div>
-                    <div class="flex justify-between items-start">
-                        <div>
-                            <h3 class="text-base font-extrabold text-white flex items-center gap-1.5">
-                                ${p.Name} 
-                                <button class="btn-copy text-[9px] text-fm-excellent bg-fm-excellent/10 px-1.5 py-0.5 rounded border border-fm-excellent/20 hover:bg-fm-excellent/30" data-name="${p.Name}">
-                                    <i class="fa-regular fa-clone"></i>
-                                </button>
-                            </h3>
-                            <p class="text-[11px] text-gray-400">${p.Position}</p>
-                        </div>
-                        <div class="text-right">
-                            <div class="text-xs font-black text-white">${p.Value}</div>
-                            <span class="text-[9px] bg-fm-excellent/20 text-fm-excellent px-1.5 py-0.5 rounded font-bold">Rat: ${p.AvRat}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-wrap gap-1 mt-2">
-                        ${p.Age <= 21 && p._analytics.buyScore >= 70 ? '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">WONDERKID</span>' : ''}
-                        ${p.Det >= 16 ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">HIGH DET</span>' : ''}
-                    </div>
-                    
-                    <div class="border-t border-fm-border/40 my-3 pt-2 text-xs flex flex-col gap-1 text-gray-300">
-                        <div class="flex justify-between items-center py-1">
-                            <span>เท้าที่ถนัด (L / R):</span>
-                            <div class="flex items-center gap-3 text-base">
-                                <span class="${leftFootClass} transition-all" title="เท้าซ้าย: ${p.LeftFoot}">
-                                    <i class="fa-solid fa-shoe-prints -scale-x-100 inline-block"></i>
-                                </span>
-                                <span class="text-gray-600 text-[10px] font-mono">|</span>
-                                <span class="${rightFootClass} transition-all" title="เท้าขวา: ${p.RightFoot}">
-                                    <i class="fa-solid fa-shoe-prints"></i>
-                                </span>
-                            </div>
-                        </div>
-                        <div class="flex justify-between"><span>ตำแหน่งเด่น:</span><span class="text-fm-excellent font-bold">${p._analytics.bestPos} (${p._analytics.bestScore}%)</span></div>
-                        <div class="flex justify-between"><span>ความน่าซื้อ:</span><span class="text-emerald-400 font-bold text-sm">${p._analytics.buyScore}/100</span></div>
-                    </div>
+                    <h3 class="text-base font-extrabold text-white flex items-center gap-1.5">
+                        ${p.Name} 
+                        <button class="btn-copy text-[9px] text-fm-excellent bg-fm-excellent/10 px-1.5 py-0.5 rounded border border-fm-excellent/20 hover:bg-fm-excellent/30" data-name="${p.Name}">
+                            <i class="fa-regular fa-clone"></i>
+                        </button>
+                    </h3>
+                    <p class="text-[11px] text-gray-400">${p.Position}</p>
+                </div>
+                <div class="text-right">
+                    <div class="text-xs font-black text-white">${p.Value}</div>
+                    <span class="text-[9px] bg-fm-excellent/20 text-fm-excellent px-1.5 py-0.5 rounded font-bold">Rat: ${p.AvRat}</span>
                 </div>
             </div>
+            
+            <div class="flex flex-wrap gap-1 mt-2">
+                ${p.Age <= 21 && p._analytics.buyScore >= 70 ? '<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">WONDERKID</span>' : ''}
+                ${p.Det >= 16 ? '<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[9px] px-1.5 py-0.5 rounded font-bold">HIGH DET</span>' : ''}
+            </div>
 
-            <div class="flex-grow p-4 flex gap-4 bg-[#151c25]/30">
-                ${renderAttr('Technical', ['Cro', 'Dri', 'Fin', 'Fir', 'Hea', 'Pas', 'Tac', 'Tec'])}
-                ${renderAttr('Mental', ['Ant', 'Bra', 'Cmp', 'Cnt', 'Dec', 'Det', 'Off', 'Pos', 'Wor'])}
-                ${renderAttr('Physical', ['Acc', 'Agi', 'Bal', 'Jum', 'Nat', 'Pac', 'Sta', 'Str'])}
+            <div class="mt-3 grid grid-cols-4 gap-1 text-center bg-fm-bg/50 p-1.5 rounded-lg border border-fm-border/30">
+                <div class="text-[10px]">
+                    <span class="text-amber-400 block text-[9px] uppercase font-semibold">Age</span>
+                    <span class="text-white font-bold">${p.Age}</span>
+                </div>
+                <div class="text-[10px] border-l border-fm-border/40">
+                    <span class="text-gray-400 block text-[9px] uppercase font-semibold">Apps</span>
+                    <span class="text-white font-bold">${p.Apps}</span>
+                </div>
+                <div class="text-[10px] border-l border-fm-border/40">
+                    <span class="text-emerald-400 block text-[9px] uppercase font-semibold">Gls</span>
+                    <span class="text-white font-bold">${p.Gls}</span>
+                </div>
+                <div class="text-[10px] border-l border-fm-border/40">
+                    <span class="text-fm-excellent block text-[9px] uppercase font-semibold">Ast</span>
+                    <span class="text-white font-bold">${p.Ast}</span>
+                </div>
+            </div>
+            
+            <div class="border-t border-fm-border/40 mt-3 pt-2 text-xs flex flex-col gap-1 text-gray-300">
+                <div class="flex justify-between items-center py-0.5">
+                    <span>เท้าที่ถนัด (L / R):</span>
+                    <div class="flex items-center gap-3 text-base">
+                        <span class="${leftFootClass} transition-all" title="เท้าซ้าย: ${p.LeftFoot}">
+                            <i class="fa-solid fa-shoe-prints -scale-x-100 inline-block"></i>
+                        </span>
+                        <span class="text-gray-600 text-[10px] font-mono">|</span>
+                        <span class="${rightFootClass} transition-all" title="เท้าขวา: ${p.RightFoot}">
+                            <i class="fa-solid fa-shoe-prints"></i>
+                        </span>
+                    </div>
+                </div>
+                <div class="flex justify-between"><span>สโมสร / ชาติ (Youth):</span><span class="text-white font-semibold">${p.Club} / ${p.Nationality} <span class="text-gray-400">(${p.YthApps})</span></span></div>
+                <div class="flex justify-between"><span>ลงเล่นทีมชาติชุดใหญ่:</span><span class="text-orange-400 font-bold">${p.IntApps} นัด</span></div>
+                <div class="flex justify-between"><span>ตำแหน่งเด่น:</span><span class="text-fm-excellent font-bold">${p._analytics.bestPos} (${p._analytics.bestScore}%)</span></div>
+                <div class="flex justify-between"><span>ความน่าซื้อ:</span><span class="text-emerald-400 font-bold text-sm">${p._analytics.buyScore}/100</span></div>
+            </div>
+        </div>
+
+        <div class="mt-2 pt-2 border-t border-fm-border/30">
+            <button class="toggle-desc-btn text-[10px] w-full bg-fm-bg hover:bg-fm-border text-gray-300 hover:text-white py-1 rounded font-bold transition-colors">
+                <i class="fa-solid fa-bars-staggered mr-1"></i> สลับเป็นบทสรุปข้อความ
+            </button>
+        </div>
+    </div>
+
+    <div class="attr-raw-block flex-grow p-4 flex gap-4 bg-[#151c25]/30">
+        ${renderAttr('Technical', ['Cro', 'Dri', 'Fin', 'Fir', 'Hea', 'Pas', 'Tac', 'Tec'])}
+        ${renderAttr('Mental', ['Ant', 'Bra', 'Cmp', 'Cnt', 'Dec', 'Det', 'Off', 'Pos', 'Wor'])}
+        ${renderAttr('Physical', ['Acc', 'Agi', 'Bal', 'Jum', 'Nat', 'Pac', 'Sta', 'Str'])}
+    </div>
+
+            <div class="attr-summary-block hidden flex-grow p-5 bg-[#151c25]/40 flex flex-col gap-3">
+                <h4 class="text-xs font-bold text-fm-excellent uppercase tracking-wider border-b border-fm-border pb-1">
+                    <i class="fa-solid fa-magnifying-glass-chart mr-1"></i> บทวิเคราะห์สไตล์การเล่นแบบสรุป
+                </h4>
+                <div class="text-xs text-gray-300 leading-relaxed space-y-2">
+                    <p class="font-semibold text-white">
+                        <i class="fa-solid fa-circle-user text-gray-400 mr-1.5"></i> 
+                        ${p.Name} ปัจจุบันอายุ ${p.Age} ปี ถนัดตำแหน่งหลักคือ <span class="text-fm-excellent">${p.Position}</span>
+                    </p>
+                    <div class="p-2 rounded bg-emerald-500/5 border border-emerald-500/10">
+                        <span class="text-emerald-400 font-bold block mb-0.5"><i class="fa-solid fa-circle-check mr-1"></i> ด้านที่เชี่ยวชาญ (จุดเด่น):</span>
+                        <span class="text-gray-300">${pros.length ? pros.join(', ') : 'ไม่มีทักษะด้านใดที่โดดเด่นเป็นพิเศษในระดับสูง'}</span>
+                    </div>
+                    <div class="p-2 rounded bg-red-500/5 border border-red-500/10">
+                        <span class="text-red-400 font-bold block mb-0.5"><i class="fa-solid fa-circle-xmark mr-1"></i> ด้านที่เป็นอุปสรรค (จุดด้อย):</span>
+                        <span class="text-gray-300">${cons.length ? cons.join(', ') : 'ภาพรวมค่อนข้างสมดุลดี ไม่มีจุดบกพร่องร้ายแรง'}</span>
+                    </div>
+                </div>
             </div>
         `;
 
             card.querySelector('.btn-copy').addEventListener('click', function () {
                 executeTextCopy(this.getAttribute('data-name'), this);
+            });
+
+            card.querySelector('.toggle-desc-btn').addEventListener('click', function () {
+                const rawBlock = card.querySelector('.attr-raw-block');
+                const summaryBlock = card.querySelector('.attr-summary-block');
+                const isShowingRaw = !rawBlock.classList.contains('hidden');
+                if (isShowingRaw) {
+                    rawBlock.classList.add('hidden');
+                    summaryBlock.classList.remove('hidden');
+                    this.innerHTML = '<i class="fa-solid fa-table-cells mr-1"></i> สลับเป็นดูค่าพลังดิบ';
+                } else {
+                    rawBlock.classList.remove('hidden');
+                    summaryBlock.classList.add('hidden');
+                    this.innerHTML = '<i class="fa-solid fa-bars-staggered mr-1"></i> สลับเป็นบทสรุปข้อความ';
+                }
             });
 
             container.appendChild(card);
