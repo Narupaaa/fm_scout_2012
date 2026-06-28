@@ -29,9 +29,10 @@
             );
         });
 
-        // สลับมุมมองตาราง/การ์ดรายงาน
-        document.getElementById('view-cards-btn').addEventListener('click', () => switchViewMode(true));
-        document.getElementById('view-table-btn').addEventListener('click', () => switchViewMode(false));
+        // ⚡ ระบบสลับมุมมอง 3 แท็บแบบสมบูรณ์ (แก้ไขรับค่า String ตรงตาม switchViewMode)
+        document.getElementById('view-cards-btn').addEventListener('click', () => switchViewMode('cards'));
+        document.getElementById('view-visual-btn').addEventListener('click', () => switchViewMode('visual'));
+        document.getElementById('view-table-btn').addEventListener('click', () => switchViewMode('table'));
 
         // ทางลัดตัวเลือก
         document.getElementById('shortcut-wonderkid').addEventListener('click', () => applyPreset('wonderkid'));
@@ -45,11 +46,37 @@
         document.getElementById('file-upload').addEventListener('change', handleIncomingFile);
     }
 
-    function switchViewMode(showCards) {
-        document.getElementById('view-cards-btn').className = showCards ? "text-xs font-bold px-4 py-2 rounded-lg bg-fm-excellent text-fm-bg" : "text-xs font-bold px-4 py-2 rounded-lg bg-fm-bg text-gray-300";
-        document.getElementById('view-table-btn').className = !showCards ? "text-xs font-bold px-4 py-2 rounded-lg bg-fm-excellent text-fm-bg" : "text-xs font-bold px-4 py-2 rounded-lg bg-fm-bg text-gray-300";
-        document.getElementById('cards-view-container').classList.toggle('hidden', !showCards);
-        document.getElementById('table-view-container').classList.toggle('hidden', showCards);
+    function switchViewMode(mode) {
+        const btnCards = document.getElementById('view-cards-btn');
+        const btnVisual = document.getElementById('view-visual-btn');
+        const btnTable = document.getElementById('view-table-btn');
+
+        const conCards = document.getElementById('cards-view-container');
+        const conVisual = document.getElementById('visual-view-container');
+        const conTable = document.getElementById('table-view-container');
+
+        // ล้างสถานะสีปุ่มทั้งหมด
+        [btnCards, btnVisual, btnTable].forEach(b => {
+            if (b) b.className = "flex-1 sm:flex-none px-4 py-2 text-gray-500 hover:text-white uppercase tracking-wider font-mono text-xs";
+        });
+
+        // ซ่อนคอนเทนเนอร์ทั้งหมดก่อน
+        conCards.classList.add('hidden');
+        conVisual.classList.add('hidden');
+        conTable.classList.add('hidden');
+
+        // เปิดใช้งานเฉพาะตัวที่เลือก
+        if (mode === 'cards') {
+            btnCards.className = "flex-1 sm:flex-none px-4 py-2 bg-pitch-border text-white uppercase font-bold tracking-wider font-mono text-xs";
+            conCards.classList.remove('hidden');
+        } else if (mode === 'visual') {
+            btnVisual.className = "flex-1 sm:flex-none px-4 py-2 bg-pitch-border text-white uppercase font-bold tracking-wider font-mono text-xs";
+            conVisual.classList.remove('hidden');
+        } else if (mode === 'table') {
+            btnTable.className = "flex-1 sm:flex-none px-4 py-2 bg-pitch-border text-white uppercase font-bold tracking-wider font-mono text-xs";
+            conTable.classList.remove('hidden');
+        }
+
         renderDashboard();
     }
 
@@ -200,7 +227,6 @@
 
             return true;
         });
-
         const sortMap = {
             'buy-score-desc': (a, b) => b._analytics.buyScore - a._analytics.buyScore,
             'total-desc': (a, b) => b._analytics.totalAttr - a._analytics.totalAttr,
@@ -209,12 +235,62 @@
         };
         processed.sort(sortMap[sortOrder]);
 
-        document.getElementById('match-count-badge').innerHTML = `<i class="fa-solid fa-filter mr-1.5"></i>ผ่านคัดกรอง: ${processed.length}`;
-        document.getElementById('player-count-badge').innerHTML = `<i class="fa-solid fa-database mr-1.5"></i>ฐานข้อมูล: ${globalPlayersDatabase.length} นักเตะ`;
+        // อัปเดตสถานะจำนวนข้อมูลผ่าน Terminal Text (ไม่ใช้ไอคอนพังๆ บนระบบ Minimal)
+        // แทนที่ส่วนอัปเดต Badge เดิมด้วยข้อความสไตล์โปรทหารเสือสโมสร
+        document.getElementById('match-count-badge').textContent = `MATCHED: ${processed.length}`;
+        document.getElementById('player-count-badge').textContent = `DATABASE: ${globalPlayersDatabase.length}`;
 
-        const isCard = !document.getElementById('cards-view-container').classList.contains('hidden');
-        isCard ? renderCards(processed) : renderTable(processed);
+        // แยกเส้นทางกระจายงานเรนเดอร์ตามแท็บที่เปิดอยู่ปัจจุบัน
+        const mode = !document.getElementById('cards-view-container').classList.contains('hidden') ? 'cards' :
+            !document.getElementById('visual-view-container').classList.contains('hidden') ? 'visual' : 'table';
+
+        if (mode === 'cards') {
+            renderCards(processed);
+        } else if (mode === 'visual') {
+            renderVisualGrid(processed);
+        } else {
+            renderTable(processed);
+        }
+    } // ปิดฟังก์ชัน renderDashboard อย่างสมบูรณ์
+
+    function renderVisualGrid(list) {
+        const container = document.getElementById('visual-view-container');
+        container.innerHTML = list.length === 0 ? `<div class="col-span-full bg-pitch-panel border border-pitch-border p-12 text-center font-mono text-xs text-gray-500">// NO VISUAL PROFILES MATCHED CURRENT CONFIGURATION.</div>` : '';
+
+        list.forEach((p, idx) => {
+            const card = document.createElement('div');
+            // การ์ดคอมแพกต์จัดวางให้แสดงผลเป็น Row/Grid สบายตา
+            card.className = "bg-pitch-panel border border-pitch-border p-5 flex flex-col items-center justify-between text-center relative group";
+
+            card.innerHTML = `
+            <div class="w-full border-b border-pitch-border/40 pb-2 mb-3 flex justify-between items-start font-mono">
+                <div class="text-left">
+                    <h3 class="text-xs font-bold text-white truncate max-w-[140px]">${p.Name}</h3>
+                    <span class="text-[9px] text-gray-500 uppercase">${p.Position}</span>
+                </div>
+                <div class="text-right">
+                    <span class="text-[9px] text-pitch-gold bg-pitch-gold/10 px-1 font-bold">AGE: ${p.Age}</span>
+                </div>
+            </div>
+
+            <div class="my-2 p-2 bg-pitch-bg/30 border border-pitch-border/20 w-full flex justify-center">
+                <canvas id="visual-radar-${idx}" width="165" height="165"></canvas>
+            </div>
+
+            <div class="w-full mt-3 pt-2 border-t border-pitch-border/40 flex justify-between items-center font-mono">
+                <span class="text-[10px] text-gray-500 uppercase tracking-wider">Purchase Score:</span>
+                <span class="text-sm font-display font-bold text-pitch-gold bg-pitch-gold/10 px-2.5 py-0.5 border border-pitch-gold/20">
+                    ${p._analytics.buyScore}
+                </span>
+            </div>
+        `;
+
+            container.appendChild(card);
+            // เรียกใช้ฟังก์ชันวาดกราฟตัวแรงที่ปรับปรุงแล้ว
+            drawRadarPolygon(`visual-radar-${idx}`, p._analytics);
+        });
     }
+
 
     function renderCards(list) {
         const container = document.getElementById('cards-view-container');
